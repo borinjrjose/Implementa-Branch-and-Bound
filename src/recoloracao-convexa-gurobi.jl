@@ -86,50 +86,11 @@ function imprime_cor_grafo(x, nro_nos, qnt_cores)
     end
 end
 
-function colorir_heuristica(nro_nos, qnt_cores, cor_no)
-    melhor_solucao = Array{Int, 2}(undef, nro_nos, qnt_cores)
-    quant_no_cor = zeros(Int, qnt_cores)
-    cor_mais_abundante = -1
-
-    for cor in cor_no
-        quant_no_cor[cor] = quant_no_cor[cor] + 1
-        if cor_mais_abundante == -1 || quant_no_cor[cor] > quant_no_cor[cor_mais_abundante]
-            cor_mais_abundante = cor
-        end
-    end
-
-    for i in 1:nro_nos
-        for j in 1:qnt_cores
-            if j == cor_mais_abundante
-                melhor_solucao[i, j] = 1
-            else
-                melhor_solucao[i, j] = 0
-            end
-        end
-    end
-
-    limitante_superior = 0
-    for cor in 1:qnt_cores
-        if cor != cor_mais_abundante
-            limitante_superior = limitante_superior + quant_no_cor[cor]
-        end
-    end
-
-    return melhor_solucao, limitante_superior
-end
-
-function resolve_sem_gurobi(nro_nos, qnt_cores, cor_no)
-    melhor_solucao, limitante_superior = colorir_heuristica(nro_nos, qnt_cores, cor_no)
-
-end
-
 function main()
     instancia_problema = "instancias/rand_10_2.txt"
     entrada = processar_entrada(instancia_problema)
 
     resolve_com_gurobi(entrada[1], entrada[2], entrada[3])
-
-    resolve_sem_gurobi(entrada[1], entrada[2], entrada[3])
 end
 
 main()
