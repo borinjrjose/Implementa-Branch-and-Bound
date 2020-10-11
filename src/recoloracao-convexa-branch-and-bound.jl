@@ -112,6 +112,24 @@ function criar_modelo_dicionario_base(nro_nos, qnt_cores, cor_no)
     return modelo, x
 end
 
+function encontrar_variavel_branch(x, nro_nos, qnt_cores)
+    for i in 1:nro_nos
+        for j in 1:qnt_cores
+            if abs(value(x[i, j])-round(value(x[i, j]))) > ϵ
+                return x[i, j]
+            end
+        end
+    end
+end
+
+function nova_melhor_solucao(melhor_solucao, x, nro_nos, qnt_cores)
+    for i in 1:nro_nos
+        for j in 1:qnt_cores
+            melhor_solucao[i, j] = value(x[i, j])
+        end
+    end
+end
+
 function resolve_sem_gurobi(nro_nos, qnt_cores, cor_no)
     melhor_solucao, limitante_superior = colorir_heuristica(nro_nos, qnt_cores, cor_no)
 
@@ -119,13 +137,66 @@ function resolve_sem_gurobi(nro_nos, qnt_cores, cor_no)
 
     optimize!(modelo)
 
-    limitante_inferior = getobjectivevalue(modelo)
+    if termination_status(modelo) == MathOptInterface.OPTIMAL
+        limitante_inferior = getobjectivevalue(modelo)
 
-    println(limitante_inferior)
+        x_branch = encontrar_variavel_branch(x, nro_nos, qnt_cores)
+
+        if x_branch == nothing
+            limitante_superior = limitante_inferior
+            nova_melhor_solucao(melhor_solucao, x, nro_nos, qnt_cores)
+        else
+            cons = @constraint(modelo, x_branch == 0)
+            limitante_superior = branch_and_bound(modelo, x, nro_nos, qnt_cores, limitante_superior, melhor_solucao)
+            delete(modelo, cons)
+
+            cons = @constraint(modelo, x_branch == 1)
+            limitante_superior = branch_and_bound(modelo, x, nro_nos, qnt_cores, limitante_superior, melhor_solucao)
+            delete(modelo, cons)
+        end
+
+        println(melhor_solucao)
+    else
+        println(string("Erro: solver não encontrou solução ótima. Status = ", termination_status(modelo)))
+    end
+end
+
+function branch_and_bound(modelo, x, nro_nos, qnt_cores, limitante_superior, melhor_solucao)
+    optimize!(modelo)
+
+    if termination_status(modelo) == MathOptInterface.OPTIMAL
+        x_branch = encontrar_variavel_branch(x, nro_nos, qnt_cores)
+
+        limitante_inferior_atual = getobjectivevalue(modelo)
+
+        if limitante_inferior_atual >= (limitante_superior-ϵ)
+            return limitante_superior
+        else
+            x_branch = encontrar_variavel_branch(x, nro_nos, qnt_cores)
+
+            if x_branch == nothing
+                limitante_superior = limitante_inferior_atual
+                nova_melhor_solucao(melhor_solucao, x, nro_nos, qnt_cores)
+                return limitante_superior
+            else
+                cons = @constraint(modelo, x_branch == 0)
+                limitante_superior = branch_and_bound(modelo, x, nro_nos, qnt_cores, limitante_superior, melhor_solucao)
+                delete(modelo, cons)
+
+                cons = @constraint(modelo, x_branch == 1)
+                limitante_superior = branch_and_bound(modelo, x, nro_nos, qnt_cores, limitante_superior, melhor_solucao)
+                delete(modelo, cons)
+
+                return limitante_superior
+            end
+        end
+    else
+        return limitante_superior
+    end
 end
 
 function main()
-    instancia_problema = "instancias/rand_50_10.txt"
+    instancia_problema = "instancias/rand_10_2.txt"
     entrada = processar_entrada(instancia_problema)
 
     resolve_sem_gurobi(entrada[1], entrada[2], entrada[3])
