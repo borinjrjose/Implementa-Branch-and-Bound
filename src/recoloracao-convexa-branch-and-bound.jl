@@ -125,7 +125,7 @@ end
 function nova_melhor_solucao(melhor_solucao, x, nro_nos, qnt_cores)
     for i in 1:nro_nos
         for j in 1:qnt_cores
-            melhor_solucao[i, j] = value(x[i, j])
+            melhor_solucao[i, j] = round(value(x[i, j]))
         end
     end
 end
